@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title> Calculadora de préstamos basada en JavaScript </title>
+    <style>
+            
+        .output {font-weight: bold;}
+        #payment {text-decoration: underline;}
+        #graph{border: solid black 1px}
+        th ,td {
+            vertical-align: top;
+        }
+    </style>
+</head>
+<body>
+<table>
+    <tr>
+        <th>
+                         Ingrese los datos del préstamo:
+        </th>
+        <td></td>
+                 <th> Saldo del préstamo, capital acumulado y pago de intereses </th>
+    </tr>
+    <tr>
+                 <td> Monto del préstamo ($): </td>
+                 <! - El evento onchange ocurre cuando cambia el contenido del dominio. ->
+        <td><input id="amount" onchange="calculate()"></td>
+                 <! - El atributo rowpan especifica el número de filas que puede abarcar la celda. ->
+        <td rowspan="8">
+            <canvas id="graph" width="400" height="250"></canvas>
+        </td>
+    </tr>
+    <tr>
+                 <td> Beneficio anual (%): </td>
+        <td><input id="apr" onchange="calculate()"></td>
+    </tr>
+    <tr>
+                 <td> Periodo de reembolso (años): </td>
+        <td><input id="years" onchange="calculate()"></td>
+    </tr>
+    <tr>
+                 <td> Código postal (busque el crédito): </td>
+        <td><input id="zipcode" onchange="calculate()"></td>
+    </tr>
+    <tr>
+                 <th> Pago aproximado: </th>
+        <td>
+                         <button onclick = "calculate ()"> Calcular </button>
+        </td>
+    </tr>
+    <tr>
+                 <td> Pago mensual: </td>
+        <td>$<span class="output" id="payment"></span></td>
+    </tr>
+    <tr>
+                 <td> Pago total: </td>
+        <td>$<samp class="output" id="total"></samp></td>
+    </tr>
+    <tr>
+                 <td> Interés total: </td>
+        <td>$<span class="output" id="totalinterset"></span></td>
+    </tr>
+    <tr>
+                 <td> Patrocinador: </td>
+        <td colspan="2">
+                         Solicite préstamos de estos buenos prestamistas:
+            <div id="lenders"></div>
+        </td>
+    </tr>
+</table>
+<script>
+         "use estricto"; // Si el navegador lo admite, inicie el modo estricto ECMAScript5
+ 
+    function calculate() {
+        var amount = document.getElementById("amount");
+        var apr = document.getElementById("apr");
+        var years = document.getElementById("years");
+        var zipcode = document.getElementById("zipcode");
+        var payment = document.getElementById("payment");
+        var total = document.getElementById("total");
+        var totalinterset = document.getElementById("totalinterset");
+ 
+                 var principal = parseFloat (amount.value); // Convertir formato de porcentaje a formato decimal
+                 var interest = parseFloat (apr.value) / 100/12; // Convertir tasa de interés anual en tasa de interés mensual
+                 var payments = parseFloat (years.value) * 12; // Convierta los pagos anuales en pagos mensuales
+ 
+                 // Ahora calcula los datos del pago mensual
+                 var x = Math.pow (1 + intereses, pagos); // Realizar exponenciación
+        var monthly = (principal * x * interest) / (x - 1);
+                 // La función isFinite () se usa para verificar si su parámetro es infinito.
+        if (isFinite(monthly)) {
+                         // Datos rellenados a la posición del campo de salida, redondeados a dos dígitos después del punto decimal
+                         payment.innerHTML = month.toFixed (2); // El método toFixed () puede redondear el Número al número especificado de posiciones decimales.
+            total.innerHTML = (monthly * payments).toFixed(2);
+            totalinterset.innerHTML = ((monthly * payments) - principal).toFixed(2);
+ 
+                         // Guarde los datos de entrada del usuario para que los datos se puedan recuperar durante la próxima visita
+            save(amount.value, apr.value, years.value, zipcode.value);
+ 
+ 
+                         // Busque y muestre prestamistas locales, pero ignore los errores de red
+            try {
+                                 // Captura todas las excepciones lanzadas por este código
+                getLenders(amount.value, apr.value, years.value, zipcode.value);
+            }
+            catch (e) {
+                                 // Ignora estas excepciones
+            }
+                         // Finalmente, use una tabla para mostrar el saldo del préstamo, los intereses y los ingresos de los activos
+            chart(principal, interest, monthly, payments)
+        } else {
+                         // El resultado del cálculo no es una matriz ni es infinito, lo que significa que los datos de entrada son ilegales o están incompletos. Borrar los datos de salida anteriores
+            payment.innerHTML = "";
+            total.innerHTML = "";
+            totalinterset.innerHTML = "";
+            chart();
+        }
+ 
+    }
+ 
+         // Guarde la entrada del usuario en las propiedades del objeto localStorage
+         // Estas propiedades continuarán permaneciendo en sus posiciones originales cuando se acceda nuevamente
+         // Si abre directamente el archivo local en el navegador según file: // URL
+         // No puede utilizar la función de almacenamiento en algunos navegadores como Firefox
+         // Es factible abrir el archivo a través de HTTP
+    function save(amount, apr, years, zipcode) {
+ 
+                 if (window.localStorage) {// Ejecute el código aquí solo cuando sea compatible con el navegador
+            localStorage.loan_amount = amount;
+            localStorage.loan_apr = apr;
+            localStorage.loan_years = years;
+            localStorage.loan_zipcode = zipcode;
+ 
+        }
+    };
+ 
+         // Cuando el documento se carga por primera vez, intentará restaurar el campo de entrada
+    window.onload = function () {
+                 // Si el navegador admite almacenamiento local y existe el último valor guardado
+        if (window.localStorage && localStorage.loan_amount) {
+            document.getElementById("amount").value = localStorage.loan_amount;
+            document.getElementById("apr").value = localStorage.loan_apr;
+            document.getElementById("years").value = localStorage.loan_years;
+            document.getElementById("zipcode").value = localStorage.loan_zipcode;
+        }
+    }
+ 
+         // Enviar la entrada del usuario al script del lado del servidor devolverá una lista de conexiones para prestamistas locales,
+         // Pero nuestro ejemplo no implementa este tipo de servicio para encontrar prestamistas
+         // Si el servicio existe, la función lo usará
+    function getLenders(amount, apr, years, zipcode) {
+                 // Si el navegador no admite el objeto XMLHttpRequest, salga
+        if (!window.XMLHttpRequest) return;
+ 
+                 // Encuentra el elemento para mostrar la lista de prestamistas
+        var ad = document.getElementById("lenders");
+                 if (! ad) return; // Si el retorno está vacío, salir
+ 
+                 // Codificar en URL los datos de entrada del cliente y agregarlos a la URL como parámetro de consulta
+                 var url = "getLenders.php" + // dirección URL para procesar datos
+                         "? amt =" + encodeURIComponent (cantidad) + // Usa los datos en la cadena de consulta
+            "&apr=" + encodeURIComponent(apr) +
+            "&yrs=" + encodeURIComponent(years) +
+            "&zip=" + encodeURIComponent(zipcode);
+ 
+        // Extrae los datos devueltos a través del objeto XMLHttpRequest
+                 var req = new XMLHttpRequest (); // Iniciar una nueva solicitud
+                 req.open ("GET", url); // Inicia una solicitud HTTP GET a través de la url
+                 req.send (null); // Envía esta solicitud sin cuerpo
+ 
+                 // Antes de devolver los datos, se registra una función de procesamiento de eventos, que será la respuesta del servidor
+                 // Llamado al regresar al cliente. Este modelo de programación asincrónica es muy común en JavaScript del lado del cliente.
+        req.onreadystatechange = function () {
+            if (req.readyState == 4 && req.status == 200) {
+                                 // Si el código se ejecuta hasta este punto, significa que obtuvimos una respuesta HTTP legal y completa
+                                 var response = req.responseText; // La respuesta HTTP se presenta como una cadena
+                                 var lenders = JSON.parse (response); // analizarlo en una matriz JS
+                                 // Convierta la matriz de objetos prestamistas chinos en forma de cadena HTML
+                var list = "";
+                for (var i = 0; i < lenders.length; i++) {
+                    list += "<li><a href='" + lenders[i].url + "'>" + lenders[i].name + "</a></li>"
+                }
+ 
+                                 // Presentar los datos en elementos HTML
+                ad.innerHTML = "<ul>" + list + "</ul>";
+            }
+        }
+    }
+ 
+         // Utilice gráficos para mostrar el saldo mensual del préstamo, los intereses y los ingresos de activos en el elemento HTML <canvas>
+         // Si no pasa en Betel, se borrarán los datos del gráfico anterior
+    function chart(principal, interest, monthly, payments) {
+                 var graph = document.getElementById ("gráfico"); // Obtener <canvas>
+                 graph.width = graph.width; // Usa una forma inteligente de borrar y restablecer el lienzo
+ 
+                 // Obtiene el objeto "contexto" del elemento canvas, este objeto define un conjunto de API de sesión
+                 var g = graph.getContext ("2d"); // Todas las operaciones de dibujo se basarán en este objeto
+        var width = graph.width,
+                         height = graph.height; // Obtener el tamaño del lienzo
+ 
+                 // La función a la izquierda y a la derecha aquí es convertir números de pago y datos en dólares en píxeles
+        function paymentToX(n) {
+            return n * width / payments;
+        }
+ 
+        function amountToY(a) {
+            return height - (a * height / (monthly * payments * 1.05));
+        }
+ 
+                 // Una línea recta de (0,0) a (pagos, pagos mensuales *) en los datos de pago
+                 g.moveTo (paymentToX (0), amountToY (0)); // comienza desde la parte inferior izquierda
+                 g.lineTo (paymentToX (pagos), // Dibuje en la esquina superior derecha
+            amountToY(monthly * payments));
+                 g.lineTo (paymentToX (pagos), amountToY (0)); // en la parte inferior derecha
+                 g.closePath (); // Conecta el final al principio
+                 g.fillStyle = "# f88"; // rojo brillante
+                 g.fill (); // Rellena el rectángulo
+                 g.font = "bold 12px sans-serif"; // Definir una fuente
+                 g.fillText ("Pago de intereses total", 20, 20); // Agrega el recibo de texto a la leyenda
+ 
+                 // Muchos datos de activos no son lineales, es difícil reflejarlos en el gráfico
+        var equity = 0;
+                 g.beginPath (); // Comienza a dibujar nuevos gráficos
+        g.moveTo(paymentToX(0), amountToY(0));
+        for (var p = 1; p <= payments; p++) {
+                         // Calcula el interés de cada pago
+            var thisMonthsInterest = (principal - equity) * interest;
+                         equity += (mensual-thisMonthsInterest); // Obtener la cantidad de activos
+                         g.lineTo (paymentToX (p), amountToY (equity)); // Dibuja los datos en el lienzo
+        }
+                 g.lineTo (paymentToX (pagos), amountToY (0)); // Trace los datos en el eje X
+                 g.closePath (); // Conecta el final de la línea al principio de la línea
+                 g.fillStyle = "green"; // Usa verde para dibujar gráficos
+        g.fill();
+                 g.fillText ("Activos totales", 20, 35);
+                 / * Establecer el texto en verde * /
+ 
+ 
+                 // Bucle de nuevo, los datos del saldo se muestran como una línea negra en negrita
+        var bal = principal;
+        g.beginPath();
+        g.moveTo(paymentToX(0), amountToY(bal));
+        for (var p = 1; p <= payments; p++) {
+            var thisMonthsInterest = bal * interest;
+            bal -= (mensual-thisMonthsInterest); // Obtener el monto del activo
+            g.lineTo(paymentToX(p), amountToY(bal))
+        }
+                 g.lineWidth = 3; // En negrita el ancho de la línea
+                 g.stroke (); // Dibujar curva de equilibrio
+                 g.fillStyle = "black"; // Usa fuente negra
+                 g.fillText ("Saldo del préstamo", 20, 50);
+ 
+                 // Marque los datos anuales en el eje X
+                 g.textAlign = "center"; // El texto se alinea en el centro
+                 var y = amountToY (0); // La coordenada Y se establece en 0
+        for (var year = 1; year * 12 <= payments; year++) {
+            var x = paymentToX(year * 12);
+            g.fillRect(x - 0.5, y - 3, 1, 3);
+            if (year == 1)
+                                 g.fillText ("correcto", x, y-5);
+            if (year % 5 == 0 && year * 12 !== payments) {
+                g.fillText(String(year), x, y - 5);
+            }
+                         g.textAlign = "right"; // Texto alineado a la derecha
+                         g.textBaseline = "middle"; // El texto está centrado verticalmente
+            var ticks = [monthly * payments, payments];
+            var rightEde = paymentToX(payments);
+            for (var i = 0; i < ticks.length; i++) {
+                var y = amountToY(ticks[i]);
+                g.fillRect(rightEde - 3, y - 0.5, 3, 1);
+                g.fillText(String(ticks[i].toFixed(0)), rightEde - 5, y);
+            }
+        }
+    }
+ 
+ 
+</script>
+</body>
+</html>
